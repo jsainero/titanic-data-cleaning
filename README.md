@@ -1,1 +1,1 @@
-# titanic-data-cleaning
+# Titanic data cleaning
