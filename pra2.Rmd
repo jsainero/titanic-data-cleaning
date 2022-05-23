@@ -1,0 +1,190 @@
+---
+title: "PRA2: Limpieza y análisis de datos"
+author: "Álvaro López y Jorge Sainero"
+date: '`r format(Sys.Date(),"%e de %B de %Y")`'
+output:
+  html_document:
+    toc: yes
+    number_sections: yes
+    toc_depth: 2
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+crtl+alt+i para añadir un chunck de código, te será útil
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+if (!require('ggplot2')) install.packages('ggplot2'); library('ggplot2')
+```
+
+
+# Descripción del dataset
+
+El dataset que hemos elegido para realizar esta práctica es el que aperecía como una de las posibles opciones del enunciado ["Titanic: Machine Learning from Disaster"](https://www.kaggle.com/c/titanic).
+
+Este dataset contiene información sobre los pasajeros que iban en el Titanic y es un conjunto de datos importante y relevante a nivel histórico porque contiene información sobre el naufragio que es una de las mayores tragedias marítimas de la historia.
+
+Este dataset además pretende responder a qué criterios se siguieron a la hora de salvar las vidas de los pasajeros y la tripulación o si simplemente fue azar.
+
+# Selección de los datos de interés
+
+Comenzamos cargando el dataset y viendo la estructura de este.
+
+```{r}
+titanic <- read.csv('data/titanic_train_data.csv')
+str(titanic)
+```
+
+Observamos que el dataset tiene 891 observaciones donde cada observación representa a un pasajero y hay 12 columnas que informan cada registro.
+
+Las columnas son las siguientes:
+
+|Columna|Descripción|
+|-------|-----------|
+| PassengerId| Id para identificar el registro. Único para cada fila |
+| Survived | Indica si el pasajero sobrevivió o no. 0 = No, 1  = Sí |
+| Pclass | Clase del billete. 1 = primera, 2 = segunda, 3 = tercera |
+| Name | Nombre del pasajaro |
+| Sex | Género del pasajero |
+| Age | Edad del pasajero |
+| SibSp | Número de hermanos y pareja del pasajero que viajaban en el barco |
+| Parch | Número de padres e hijos del pasajero que viajaban en el barco |
+| Ticket | Número del ticket |
+| Fare | Precio del ticket |
+| Cabin | Número de la cabina |
+| Embarked | Indica donde embarcó el pasajero. C = Cherbourg, Q = Queenstown, S = Southampton |
+
+## Eliminación de las columnas que no son de interés
+
+De estas colunmas a priori el PassengerId y el Nombre no nos aportan niguna información así que las eliminaremos.
+
+```{r}
+titanic <- titanic[,c(2,3,5:12)]
+```
+
+Revisamos el resto de los campos para ver si hay alguno más que no vaya a aportar valor al análisis.
+
+```{r}
+head(titanic, 10)
+```
+
+Observando los campos Ticket y Cabin parece que van a ser identificadores únicos o casi únicos y que no van a aportar valor al análisis así que decidimos eliminarlos también.
+
+```{r}
+titanic <- titanic[,c(1:6,8,10)]
+```
+
+## Cambio de tipo de las columnas
+
+Antes de comenzar con la limpieza de los datos, conviene que las columnas sean del tipo correcto. Observando la descripción de las columnas, tenemos tres columnas que son de tipo `factor` y no de tipo númerico o string: _Survived_, _Pclass_, _Sex_ y _Embarked_.
+
+```{r}
+titanic$Survived <- factor(titanic$Survived, levels = c(0,1), labels = c('No','Yes'))
+titanic$Pclass <- factor(titanic$Pclass, levels = c(1,2,3), labels = c('1st','2nd','3rd'))
+titanic$Sex <- as.factor(titanic$Sex)
+titanic$Embarked <- factor(titanic$Embarked, levels = c('C','Q','S'), labels = c('Cherbourg','Queenstown','Southampton'))
+```
+
+Comprobamos que este cambio se ha realizado correctamente.
+
+```{r}
+summary(titanic)
+```
+
+# Limpieza de datos
+
+## Análisis de nulos, ceros y elementos vacíos
+
+```{r}
+colSums(is.na(titanic))
+```
+
+Vemos que tenemos 2 registros con la variable _Embarked_ a nulo. Esto no nos debería preocupar demasiado ya que no son demasiados y podríamos tomar la decisión de eliminar estos registros del dataset. En cambio tenemos 177 registros con la variable _Age_ a nulo. En este caso si tenemos que decidir entre imputar los valores o eliminar la variable del análisis porque no es factible eliminar casi el 20% de los registros del conjunto.
+
+```{r}
+colSums(titanic=="")
+colSums(titanic==0)
+```
+
+Comprobando también que valores son vacíos o cero no vemos nada extraño. Observamos que hay un gran número de personas que viajan sin familiares o sin familia (*SibSp* y _Parch_ igual a 0) y que hay 15 pasajeros que viajan gratis (*Fare* igual a 0).
+
+### Tratamiento de valores nulos
+
+Como hemos comentado antes, en el caso de los registros con las variable _Embarked_ a nula los vamos a eliminar.
+
+```{r}
+ind.Embarked <- which(is.na(titanic$Embarked))
+titanic <- titanic[-ind.Embarked,]
+```
+
+La opción por la que hemos optado para tratar este caso es calcular el valor de la variable _Age_ para los registros que tienen valor nulo.
+
+```{r}
+ind.Age <- which(is.na(titanic$Age))
+lineal.model.Age <- lm(Age ~ Survived + Pclass + Sex + Fare, data=titanic)
+titanic$Age[ind.Age] <- trunc(predict(lineal.model.Age, newdata=titanic[ind.Age,]))
+summary(titanic$Age[ind.Age])
+summary(titanic$Age[-ind.Age])
+```
+
+A priori la imputación de valores parece razonablemente buena ya que tiene valores similares en dos estimadores importantes como son la media y la mediana. También los valores máximo y mínimo de este conjunto están dentro de los de la variable.
+
+Con esto concluimos que esta forma de imputar los valores es mejor que haber colocado a todos los registros el valor de la media o la mediana.
+
+------ Podríamos hacer algún test para ver si pueden seguir la misma ditribución los dos arrays???? -----------
+
+## Detección y tratamiento de outliers
+
+```{r}
+boxplot(titanic$Age,main="Box plot age", col="gray")
+boxplot(titanic$Fare,main="Box plot fare", col="gray")
+```
+
+Observamos que en el caso de la edad no vemos ningún outlier que sea relevante ya que los outliers que vemos pertenecen a personas que tienen entre 60 y 80 años que son valores razonables aunque sean notablemente superiores a los del resto del conjunto.
+
+En el caso de la variable Fare vemos muchos outliers lo que puede ser porque las tarifas cambien en función de donde hayan embarcado los pasajeros por lo que vamos a repetir el dibujo de los boxplots pero para cada uno de los conjuntos.
+
+
+```{r}
+boxplot(Fare ~ Embarked, data = titanic)
+```
+
+
+Observamos un par de outliers destacados en los casos de `Cherbourg` y `Queenstown` que analizaremos a continuación.
+
+
+```{r}
+max.Cherbourg<- max(boxplot.stats(titanic[titanic$Embarked == 'Cherbourg', 'Fare'])$out)
+titanic[titanic$Fare == max.Cherbourg & titanic$Embarked == 'Cherbourg',]
+
+max.Queenstown<- max(boxplot.stats(titanic[titanic$Embarked == 'Queenstown', 'Fare'])$out)
+titanic[titanic$Fare == max.Queenstown & titanic$Embarked == 'Queenstown',]
+```
+
+No parecen ser outliers ya que pertenecen a billetes de primera clase que son los más caros. Así que no los eliminaremos del conjunto de datos.
+
+
+# Análisis de datos
+
+## Selección de los grupos de datos a analizar
+
+Partiendo de la premisa de que la variable principal de nuestro conjunto de datos es la variable _Survived_, los dos grupos principales que compararemos son supervivientes y no supervivientes a través de las distintas variables.
+
+Lo primero que haremos será generar una serie de histogramas y gráficos de cajas para ver la relación del resto de variables con la variable _Survived_.
+
+```{r}
+ggplot(data=titanic,aes(x=Pclass,fill=Survived))+geom_bar()
+ggplot(data=titanic,aes(x=Sex,fill=Survived))+geom_bar()
+ggplot(data=titanic,aes(x=SibSp,fill=Survived))+geom_bar(position="fill")+ylab("frequency")
+ggplot(data=titanic,aes(x=Parch,fill=Survived))+geom_bar(position="fill")+ylab("frequency")
+ggplot(data=titanic,aes(x=Embarked,fill=Survived))+geom_bar()
+```
+
+Para las variables _SibSp_ y _Parch_ optamos por histogramas de frecuencia ya que el grupo de 0 era el más numeroso y no se podían apreciar bien el resto en los gráficos.
+
+```{r}
+boxplot(Fare ~ Survived, data = titanic)
+```
+
+
