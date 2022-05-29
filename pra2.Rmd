@@ -121,11 +121,44 @@ titanic <- titanic[-ind.Embarked,]
 La opción por la que hemos optado para tratar este caso es calcular el valor de la variable _Age_ para los registros que tienen valor nulo.
 
 ```{r}
+(hist(titanic$Age, main='Density histogram Age', ylab='Density', breaks=30, freq=FALSE))
+```
+
+
+```{r}
 ind.Age <- which(is.na(titanic$Age))
 lineal.model.Age <- lm(Age ~ Survived + Pclass + Sex + Fare, data=titanic)
+summary(lineal.model.Age)
+```
+
+```{r}
 titanic$Age[ind.Age] <- trunc(predict(lineal.model.Age, newdata=titanic[ind.Age,]))
 summary(titanic$Age[ind.Age])
+```
+
+```{r}
+(hist(titanic$Age[ind.Age], main='Density histogram Age', ylab='Density', breaks=30, freq=FALSE))
+```
+
+```{r}
 summary(titanic$Age[-ind.Age])
+```
+
+```{r}
+(hist(titanic$Age[-ind.Age], main='Density histogram Age', ylab='Density', breaks=30, freq=FALSE))
+```
+
+```{r}
+(hist(titanic$Age, main='Density histogram Age', ylab='Density', breaks=30, freq=FALSE))
+```
+
+TODO JUNTO SIN GRÁFICOS
+```{r}
+#ind.Age <- which(is.na(titanic$Age))
+#lineal.model.Age <- lm(Age ~ Survived + Pclass + Sex + Fare, data=titanic)
+#titanic$Age[ind.Age] <- trunc(predict(lineal.model.Age, newdata=titanic[ind.Age,]))
+#summary(titanic$Age[ind.Age])
+#summary(titanic$Age[-ind.Age])
 ```
 
 A priori la imputación de valores parece razonablemente buena ya que tiene valores similares en dos estimadores importantes como son la media y la mediana. También los valores máximo y mínimo de este conjunto están dentro de los de la variable.
@@ -171,20 +204,303 @@ No parecen ser outliers ya que pertenecen a billetes de primera clase que son lo
 
 Partiendo de la premisa de que la variable principal de nuestro conjunto de datos es la variable _Survived_, los dos grupos principales que compararemos son supervivientes y no supervivientes a través de las distintas variables.
 
-Lo primero que haremos será generar una serie de histogramas y gráficos de cajas para ver la relación del resto de variables con la variable _Survived_.
+Lo primero que haremos será generar una serie de histogramas y gráficos de cajas para ver la distribución de la variable _survived_ y su relación con el resto de variables.
+
+```{r}
+ggplot(data=titanic,aes(x=Survived,fill = Survived))+geom_bar()
+```
+
 
 ```{r}
 ggplot(data=titanic,aes(x=Pclass,fill=Survived))+geom_bar()
 ggplot(data=titanic,aes(x=Sex,fill=Survived))+geom_bar()
+ggplot(data=titanic,aes(x=SibSp,fill=Survived))+geom_bar()
 ggplot(data=titanic,aes(x=SibSp,fill=Survived))+geom_bar(position="fill")+ylab("frequency")
+ggplot(data=titanic,aes(x=Parch,fill=Survived))+geom_bar()
 ggplot(data=titanic,aes(x=Parch,fill=Survived))+geom_bar(position="fill")+ylab("frequency")
 ggplot(data=titanic,aes(x=Embarked,fill=Survived))+geom_bar()
 ```
 
-Para las variables _SibSp_ y _Parch_ optamos por histogramas de frecuencia ya que el grupo de 0 era el más numeroso y no se podían apreciar bien el resto en los gráficos.
+Para las variables _SibSp_ y _Parch_ además de los diagramas de barras, optamos por estandarizar cada barra para que tenga la misma altura y muestre las proporciones relativas ya que el grupo 0 era el más numeroso y no se podría apreciar bien el resto en los gráficos.
+
+```{r}
+boxplot(Age ~ Survived, data = titanic)
+```
+
 
 ```{r}
 boxplot(Fare ~ Survived, data = titanic)
 ```
 
+
+## Comprobación de la normalidad y homogeneidad de la varianza
+
+### Normalidad
+El análisis de la normalidad determina si los datos de la muestra se han extraído de una población distribuida normalmente. Dos gráficos con los que es posible comprobar la normalidad son el gráfico Q-Q o cuantil-cuantil y el diagrama de densidad con la curva de distribución normal.
+
+El Q-Q Plot permite identificar la desviación de los datos de la muestra respecto a una población normal. Mediante *qqline* se dibuja una línea recta correspondiente a la distribución normal teórica, y mediante *qqnorm* se dibujan los puntos, que son los datos distribuidos según los cuantiles teóricos. Si los puntos siguen la línea, los datos se distribuyen normalmente.
+
+El diagrama de densidad muestra la distribución de los datos. Se aproximarán a una distribución normal si la densidad es simétrica, centrada en el medio, y disminuye hacia las 2 desviaciones estándar de la media, dentro de las cuales se encuentra aproximadamente el 95% de los datos.
+
+**Variable _Age_**
+
+```{r}
+{qqnorm(titanic$Age, main="Normal Q-Q Plot Age")
+qqline(titanic$Age)}
+```
+
+
+```{r}
+{(hist(titanic$Age, main='Density histogram Age', ylab='Density', freq=FALSE, breaks=20))
+lines(density(titanic$Age), col="red", lwd=2)}
+```
+
+Test Lilliefors o Shapiro-Wilk.
+
+```{r}
+shapiro.test(titanic$Age)
+```
+
+```{r}
+if(!require("nortest")) install.packages("nortest")
+library("nortest")
+lillie.test(titanic$Age)
+```
+
+Para los dos test (o poner solo 1) se verifica la no normalidad al rechazar la hipótesis nula.
+
+No obstante, el conjunto de datos es suficientemente grande (879 registros), y por el teorema del límite central (TLC) se podría considerar que los datos siguen una distribución normal.
+
+**Variable _Fare_**
+
+```{r}
+{qqnorm(titanic$Fare, main="Normal Q-Q Plot Fare")
+qqline(titanic$Fare)}
+```
+
+```{r}
+{(hist(titanic$Fare, main='Density histogram Fare', ylab='Density', freq=FALSE, breaks=20))
+lines(density(titanic$Fare), col="red", lwd=2)}
+```
+
+```{r}
+shapiro.test(titanic$Fare)
+```
+
+```{r}
+lillie.test(titanic$Fare)
+```
+
+Igual que Age: según los gráficos y los test, la población de la muestra y, por tanto, los datos, no se distribuirían normalmente. Pero al aplicar el TLC, los datos sí siguen una distribución normal.
+
+### Homocedasticidad
+
+Según los gráficos y los test de normalidad, como las variables _Age_ y _Fare_ no siguen una distribución normal, se debería utilizar el test de Fligner-Killen. No obstante, como el TLC dice lo contrario, se debería utilizar el test de Levene basándose en la mediana de los datos, la medida menos sensible a la normalidad.
+
+Por tanto, ¿se aplican los dos test?
+
+**Variable _Age_**
+
+```{r}
+boxplot(Age ~ Survived, data = titanic,
+        col=c('red', 'green'),
+        main='Boxplot Age ~ Survived')
+```
+
+La amplitud de la caja y de los bigotes del grupo que sobrevivió es algo mayor a la amplitud del grupo de no sobrevivió. Como los tamaños son diferentes, se podría concluir que la varianza de la distribución de "Yes" es mayor y, por tanto, no se asume igualdad de varianzas. Sin embargo, al ser una variación no tan grande, es necesario comprobar con los tests.
+
+```{r}
+if(!require("car")) install.packages("car")
+library("car")
+leveneTest(Age ~ Survived, data=titanic)
+```
+
+```{r}
+fligner.test(Age ~ Survived, data=titanic)
+```
+
+Dado que para ambas pruebas, el p-valor es inferior al nivel de significancia 0.05, se rechaza la hipótesis nula y se concluye que la variable _Age_ presenta varianzas estadísticamente diferentes para los dos grupos de _Survived_.
+
+**Variable _Fare_**
+
+```{r}
+boxplot(Fare ~ Survived, data = titanic,
+        col=c('red', 'green'),
+        main='Boxplot Fare ~ Survived')
+```
+
+La amplitud de la caja y de los bigotes del grupo que sobrevivió es mayor a la amplitud del grupo de no sobrevivió. Esta variación es mucho más clara, ya que la base superior de la caja roja llega a un precio de 25€ y la caja verde a uno de 60€ aproximadamente. Además, el bigote superior del primer grupo solo llega a un precio del 60% y el del segundo a uno de 125€ aproximadamente. Se concluye que las varianzas son diferentes. Para corroborarlo se utilizan los tests.
+
+```{r}
+leveneTest(Fare ~ Survived, data=titanic)
+```
+
+
+```{r}
+fligner.test(Fare ~ Survived, data=titanic)
+```
+
+Para la variable _Fare_ lo mismo que _Age_, pero con una conclusión más contundente de heteroscedasticidad (varianzas heterogéneas).
+
+
+## Aplicación de pruebas estadísticas
+
+Todas las pruebas estadísticas tendrán en cuenta la variable objetivo _Survived_. En primer lugar se realizarán dos contrastes de hipótesis, uno con la variable cuantitativa _Fare_ y otro con la variable categórica _Sex_. Luego, una regresión logística. Y, finalmente se usará un modelo supervisado de clasificación que predecirá si un pasajero sobrevive o no.
+
+
+### Contrastes de hipótesis
+
+El primer paso para un contraste de hipótesis es formular la pregunta de investigación. En base a ella se examinará la hipótesis nula y la alternativa. Finalmente, al usar el test estadístico correcto se aceptará o se rechazará la hipótesis con cierto nivel de confianza.
+
+La primera pregunta que nos hacemos es:
+
+**¿Los pasajeros que sobrevivieron pagaron una entrada más cara que los que fallecieron?**
+
+Se plantea si el precio medio del ticket de los supervivientes ($\mu_1$) es mayor al precio medio del ticket de los fallecidos ($\mu_2$). La hipótesis nula ($H_0$) representa el caso donde no hay efecto, es decir, cuando la media de *Fare* es la misma con un nivel de confianza para todos los pasajeros. La hipótesis alternativa ($H_1$) es cuando se responde afirmativamente a la pregunta, es decir, los los supervivientes pagaron más que los fallecidos.
+
+$$
+H_0: \mu_1 = \mu_2
+$$
+$$
+H_1: \mu_1 > \mu_2
+$$
+
+Se trata de un contraste paramétrico unilateral por la derecha de dos muestras independientes (supervivientes y no supervivientes) sobre la media con varianza desconocida.
+
+Al preguntarse si un grupo pagó más que el otro, el test es unilateral por la derecha.
+
+El test a utilizar es paramétrico ya que, aunque la igualdad de varianzas no se cumple, la distribución de _Fare_ se aproxima a una normal. Así que se realiza el test _t-Student_. Y se utilizará un nivel de confianza del 95%.
+
+Se puede aplicar el test manualmente a partir de los grados de libertad y el estadístico de contraste. Si este cae fuera de la región de aceptación y el p-valor es inferior a 0.05, la hipótesis nula se rechaza.
+
+Se crea la función *test_two_samples* que calcula los datos.
+
+```{r}
+test_two_samples <- function(var, var_samples, sample1, sample2, alfa, delta){
+  m1 <- var[var_samples==sample1]
+  m2 <- var[var_samples==sample2]
+  
+  mean1 <- mean(m1)
+  n1 <- length(m1)
+  s1 <- sd(m1)
+  
+  mean2 <- mean(m2)
+  n2 <- length(m2)
+  s2 <- sd(m2)
+  
+  # Grados de libertad
+  grados <- ((((s1^2)/n1)+((s2^2)/n2))^2) / ((((s1^2)/n1)^2)/(n1-1) + ((((s2^2)/n2)^2)/(n2-1)))
+    
+  # Estadístico de contraste
+  tobs <- (mean1-mean2-delta) / (sqrt(((s1^2)/n1)+((s2^2)/n2)))
+    
+  # Región de aceptación y p-valor
+  tcritL <- "-INF"
+  tcritU <- qt(1-alfa, df=grados)
+  pvalue <- pt(tobs, lower.tail=FALSE, df=grados)
+  
+  
+  cat("Muestra 1:", "\n\tMedia:", mean1, "\n\tDesviación estándar:", s1, "\n\tLongitud:", n1, "\nMuestra 2:", "\n\tMedia:", mean2, "\n\tDesviación estándar:", s2, "\n\tLongitud:", n2, "\n\nGrados de libertad:", grados ,"\ntobs:", tobs, "\nValores críticos:",
+      "\n\ttcritL:", tcritL,"\n\ttcritU:", tcritU, "\nvalor p:", pvalue)
+}
+```
+
+```{r}
+test_two_samples(titanic$Fare, titanic$Survived, "Yes", "No", 0.05, 0)
+```
+
+El valor observado $f_{obs} = 6.76$ está fuera de la zona de aceptación de la hipótesis nula [-INF, 1.648]. Además, el p-valor = 2.24e-11 < 0.05.
+
+También se puede aplicar mediante la función _t.test()_ que R implementa.
+
+```{r}
+t.test(titanic$Fare[titanic$Survived=="Yes"], titanic$Fare[titanic$Survived=="No"], alternative="greater", var.equal=FALSE)
+```
+
+Con el test se comprueba que el contraste de hipótesis, los grados de libertad, el p-valor y las dos medias son las mismas. Se rechaza la hipótesis nula y se concluye que los pasajeros que sobrevivieron pagaron una entrada más cara que los pasajeros que fallecieron con un nivel de confianza del 95%.
+
+
+La segundapregunta que nos hacemos es:
+
+**¿Existe una relación entre el sexo del pasajero y si sobrevivieron o no?**
+
+La hipótesis nula esque ambas variables son independientes. La hipótesis alternativa es que sí existe una relación y las diferencias son significativas.
+
+```{r}
+table_survived_sex <- table(titanic$Survived, titanic$Sex)
+
+chisq.test(table_survived_sex)
+```
+
+El p-valor es muy bajo -> Sí existen una relación de dependencia entre las dos variables, con un nivel de confianza del 95%.
+
+
+### Regresión logística
+
+Primero se separa en training y test.
+
+```{r}
+##library(caret)
+##library(caTools)
+
+# Tamaño
+smp_size <- floor(0.80 * nrow(titanic))
+
+# Semilla para que los datos sean reproducibles
+set.seed(123)
+
+# Separación en el conjunto de entrenamiento y test
+separacion <- sample(seq_len(nrow(titanic)), size=smp_size)
+
+train <- titanic[separacion,]
+test <- titanic[-separacion,]
+
+c(nrow(train), nrow(test))
+```
+
+Modelo de regresión logística.
+
+```{r}
+model <- glm(formula = Survived ~ Sex + Pclass + Age + SibSp, family = "binomial", data=train)
+
+summary(model)
+```
+
+Creo que el mejor AIC es poniendo como variables independientes _Sex_, _Pclass_, _Age_ y _SibSp_. Al introducir las otras variables, o el AIC aumenta, o la significancia de las variables es baja ya que el p-valor supera el 0.05.
+
+
+```{r}
+if(!require("caret")) install.packages("caret")
+library("caret")
+
+prediction <- predict(model, newdata = test, type="response")
+
+binary_prediction <- ifelse(prediction < 0.5, "No", "Yes")
+binary_prediction <- factor(binary_prediction)
+
+confusionMatrix(data = binary_prediction, reference = test$Survived, positive = "No")
+```
+
+Las métricas obtenidas de la matriz de confusión son buenas, sobretodo la sensibilidad = 86.41% que corresponde a los pasajeros que el modelo ha clasificado como que no sobrevivieron respecto al total de pasajeros que no sobrevivieron.
+
+
+```{r}
+if(!require("pROC")) install.packages("pROC")
+library("pROC")
+
+prob=predict(model, test, type="response")
+roc_curve=roc(test$Survived, prob, data=test)
+
+plot(roc_curve)
+
+```
+
+```{r}
+auc(roc_curve)
+```
+
+El modelo tiene gran capacidad de clasificar correctamente si sobrevive o no, dado el género, la clase del billete, la edad y el número de hermanos y parejas también en el barco.
+
+
+### Tercer análisis
 
