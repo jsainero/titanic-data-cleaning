@@ -447,7 +447,7 @@ Primero se separa en training y test.
 smp_size <- floor(0.80 * nrow(titanic))
 
 # Semilla para que los datos sean reproducibles
-set.seed(123)
+set.seed(666)
 
 # Separación en el conjunto de entrenamiento y test
 separacion <- sample(seq_len(nrow(titanic)), size=smp_size)
@@ -456,6 +456,8 @@ train <- titanic[separacion,]
 test <- titanic[-separacion,]
 
 c(nrow(train), nrow(test))
+table(train$Survived)
+table(test$Survived)
 ```
 
 Modelo de regresión logística.
@@ -481,7 +483,7 @@ binary_prediction <- factor(binary_prediction)
 confusionMatrix(data = binary_prediction, reference = test$Survived, positive = "No")
 ```
 
-Las métricas obtenidas de la matriz de confusión son buenas, sobretodo la sensibilidad = 86.41% que corresponde a los pasajeros que el modelo ha clasificado como que no sobrevivieron respecto al total de pasajeros que no sobrevivieron.
+Las métricas obtenidas de la matriz de confusión son buenas, sobretodo la sensibilidad = 88.35% que corresponde a los pasajeros que el modelo ha clasificado como que no sobrevivieron respecto al total de pasajeros que no sobrevivieron.
 
 
 ```{r}
@@ -502,5 +504,74 @@ auc(roc_curve)
 El modelo tiene gran capacidad de clasificar correctamente si sobrevive o no, dado el género, la clase del billete, la edad y el número de hermanos y parejas también en el barco.
 
 
-### Tercer análisis
+### Random Forest
+
+Un Random Forest es un conjunto o _ensamble_ de árboles de decisión combinados con _bagging_. Es decir, en cada árbol se utiliza una porción de los datos de entrenamiento y ningún árbol mira exactamente los mismos datos que otro árbol, compensando los errores de cada uno. Esta capacidad de entrenarse permite al modelo generalizar mejor y evitar el sobreajuste.
+
+Random Forest es implementa mediante la función _randomForest_ del paquete con el mismo nombre.
+
+```{r message= FALSE, warning=FALSE}
+if(!require("randomForest")) install.packages("randomForest")
+library("randomForest")
+
+# Separación en train y test
+set.seed(666)
+split <- floor(nrow(titanic)*0.75)
+
+train2 <- titanic[1:split,]
+test2 <- titanic[(split+1):nrow(titanic),]
+
+train2 <- train2[,c(1:4,7)]
+test2x <- test2[,c(2:4,7)]
+test2y <- test2[,1]
+
+# Modelo
+model2 <- randomForest(Survived~., data=train2, ntree=1500)
+model2
+```
+
+La tasa del error al crear el modelo es del 16.37%, concretamente del 7.37% para los no supervivientes y del 30.50 para los supervivientes.
+
+Al hacer el plot del modelo se obtiene una gráfica el error para la clase 1 (rojo), la clase 2 (verde) y las muestras a usar (negro) sobre la cantidad de los 1500 árboles creados gracias al parámetro _ntree_.
+
+```{r message= FALSE, warning=FALSE}
+plot(model2)
+```
+
+Número de nodos usados en cada árbol: 
+
+```{r message= FALSE, warning=FALSE}
+hist(treesize(model2),
+     main = "Número de nodos para los árboles",
+     col = "lightblue")
+```
+
+Importancia de las variables en el modelo:
+
+```{r message= FALSE, warning=FALSE}
+importance(model2)
+```
+
+```{r message= FALSE, warning=FALSE}
+varImpPlot(model2,
+           n.var = 4,
+           main = "Importancia de las variables")
+```
+
+Se había probado un modelo inicial con todas las variables pero se descartaron aquellas con una importancia inferior a 20.
+
+```{r message= FALSE, warning=FALSE}
+predicted_model2 <- predict(model2, test2)
+confusionMatrix(data=predicted_model2, reference=test2$Survived, positive='No')
+```
+
+Este modelo obtiene una _accuracy_ del 87.89% y una sensibilidad del 95.77%, unas métricas superiores a las obtenidas con el modelo de regresión logística.
+
+
+
+# Resolución del problema
+
+
+
+
 
