@@ -241,7 +241,7 @@ El grupo con más representación es `No`, correspondiente a los pasajeros que n
 if (!require('gridExtra')) install.packages('gridExtra'); library('gridExtra')
 ```
 
-Para las variables _SibSp_, _Parch_ y _NameAbbreviation_ además de los diagramas de barras, optamos por estandarizar cada barra para que tenga la misma altura y muestre las proporciones relativas para apreciar bien todos los grupos.
+Para las variables _SibSp_ y _Parch_ además de los diagramas de barras, optamos por estandarizar cada barra para que tenga la misma altura y muestre las proporciones relativas para apreciar bien todos los grupos.
 
 ```{r echo=FALSE}
 ggp1 <- ggplot(data=titanic,aes(x=Pclass,fill=Survived))+geom_bar()
@@ -272,6 +272,7 @@ par(mfrow = c(1, 2))
 
 Respecto a _Age_, el el 50% del boxplot (caja) de los fallecidos abarca más edades que los supervivientes. Y para _Fare_ ocurre lo contrario. Estos dos diagramas ayudarán a definir si hay homogeneidad en la varianza o no.
 
+De todos las variables comparadas con _Survived_, se usarán aquellas que para la regresión logística y _random forest_ sean útiles. Y para los contrastes de hipótesis se usará _Survived_ con _Fare_ y _Survived_ con _Fare_.
 
 ## Comprobación de la normalidad y homogeneidad de la varianza
 
@@ -331,9 +332,9 @@ Un test de homocedasticidad comprueba la igualdad de varianzas entre los grupos 
 fligner.test(Age ~ Survived, data=titanic)
 ```
 
-El p-valor = 0.1425 > 0.05. De esta manera, se acepta la hipótesis nula y se concluye que la variable _Age_ presenta varianzas estadísticamente iguales para los dos grupos de _Survived_.
+El p-valor = 0.04703 < 0.05. Se rechaza la hipótesis nula, pero no de una manera clara. A pesar de aproximarse a 0.05, se concluye que la variable _Age_ presenta varianzas estadísticamente diferentes para los dos grupos de _Survived_.
 
-Esto se puede representar con los boxplots visualizados en el apartado 4.1. La amplitud de la caja y de los bigotes del grupo que no sobrevivió es un poco mayor a la amplitud del grupo que sobrevivió. Esta diferencia pequeña es aceptada asumiendo igualdad de varianzas para las dos distribuciones.
+Esto se puede representar con los boxplots visualizados en el apartado 4.1. La amplitud de la caja y de los bigotes del grupo que no sobrevivió es un poco mayor a la amplitud del grupo que sobrevivió. Esta diferencia pequeña asume la no igualdad de varianzas para las dos distribuciones.
 
 **Variable _Fare_**
 
