@@ -1,6 +1,6 @@
 ---
 title: 'PRA2: Limpieza y análisis de datos'
-author: "Alvaro Lopez y Jorge Sainero"
+author: "Álvaro López y Jorge Sainero"
 date: '`r format(Sys.Date(),"%e de %B, %Y")`'
 output:
   pdf_document: 
@@ -219,7 +219,7 @@ Los cinco precios no parecen ser outliers ya que pertenecen a pasajeros con bill
 Después de eliminar las cuatro variables y los dos registros, guardamos el nuevo conjunto de datos csv.
 
 ```{r}
-write.csv(titanic, "titanic_train_data_clean.csv")
+write.csv(titanic, "output/titanic_train_data_clean.csv")
 ```
 
 
@@ -272,7 +272,7 @@ par(mfrow = c(1, 2))
 
 Respecto a _Age_, el el 50% del boxplot (caja) de los fallecidos abarca más edades que los supervivientes. Y para _Fare_ ocurre lo contrario. Estos dos diagramas ayudarán a definir si hay homogeneidad en la varianza o no.
 
-De todos las variables comparadas con _Survived_, se usarán aquellas que para la regresión logística y _random forest_ sean útiles. Y para los contrastes de hipótesis se usará _Survived_ con _Fare_ y _Survived_ con _Fare_.
+De todos las variables comparadas con _Survived_, se usarán aquellas que para la regresión logística y _random forest_ sean útiles. Y para los contrastes de hipótesis se usará _Survived_ con _Fare_ y _Survived_ con _Sex_.
 
 ## Comprobación de la normalidad y homogeneidad de la varianza
 
@@ -384,10 +384,14 @@ La segunda pregunta que nos hacemos es:
 
 **¿Existe una relación entre el sexo del pasajero y si sobrevivieron o no?**
 
-En este caso, las hipótesis nula y alternativa son:
+En este caso, las dos variables a comparar son categóricas, de manera que se aplica el test de $\chi^{2}$ mediante la función *chisq.test()* de R.
+
+Las hipótesis nula y alternativa son:
 
 + $H_0$: las variables _Sex_ y _Survived_ son independientes.
 + $H_1$: existe una relación entre ambas variables y las diferencias son significativas.
+
+Si el p-valor es inferior al nivel de significancia 0.05, $H_0$ se rechaza.
 
 ```{r}
 table_survived_sex <- table(titanic$Survived, titanic$Sex)
